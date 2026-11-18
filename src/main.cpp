@@ -1,63 +1,87 @@
-#include <glad/glad.h>          // Glad підключається раніше за GLFW
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
+#include "ViewerWindow.h"
+#include "OpenglRenderSystem.h"
+#include "GeometryPrimitives.h"
 
-#include <iostream>
+#include <glm/gtc/matrix_transform.hpp>
+
+// Яку фігуру показує в'ювер: перемикається клавішею Space
+enum class Shape
+{
+    Cube,
+    Pyramid
+};
+
+void renderScene(OpenglRenderSystem& rs, Shape shape)
+{
+    static const auto& cubeData = GeometryPrimitives::createCubeVertices();
+    static const auto& pyramidData = GeometryPrimitives::createPyramidVertices();
+
+    if (shape == Shape::Cube)
+        rs.renderTriangleSoup(cubeData);
+    else
+        rs.renderTriangleSoup(pyramidData);
+}
+
+void moveCube(OpenglRenderSystem& rs, glm::vec3 offset)
+{
+	rs.setViewMatrix(glm::translate(rs.getViewMatrix(), offset));
+}
 
 int main()
 {
-    // Приклад використання GLM
-    glm::vec3 vector(1.0f, 0.0f, 0.0f);
-    std::cout << "Vector: (" << vector.x << ", " << vector.y << ", " << vector.z << ")\n";
+	constexpr int width = 640;
+	constexpr int height = 480;
 
-    // Ініціалізація GLFW
-    if (!glfwInit())
-    {
-        std::cerr << "Failed to initialize GLFW!\n";
-        return -1;
-    }
+	OpenglRenderSystem rs;
+	ViewerWindow window("My3DViewer", width, height);
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
+	Shape currentShape = Shape::Pyramid;
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "My3DViewer", nullptr, nullptr);
-    if (!window)
-    {
-        std::cerr << "Failed to create GLFW window!\n";
-        glfwTerminate();
-        return -1;
-    }
-    glfwMakeContextCurrent(window);
+	window.setKeyCallback([&rs, &currentShape](KeyCode key, Action action, Modifier mods)
+	{
+		// Реагуємо на натискання та утримання клавіші, але не на її відпускання
+		if (action == Action::Release)
+			return;
 
-    // Завантаження функцій OpenGL через Glad
-    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
-    {
-        std::cerr << "Failed to initialize Glad!\n";
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return -1;
-    }
-    std::cout << "OpenGL version: " << glGetString(GL_VERSION) << "\n";
+		if (key == KeyCode::UP)
+			moveCube(rs, { 0, 0.1, 0 });
 
-    // Головний цикл: заливка фону, вихід по Esc або закриттю вікна
-    while (!glfwWindowShouldClose(window))
-    {
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            glfwSetWindowShouldClose(window, GLFW_TRUE);
+		if (key == KeyCode::DOWN)
+			moveCube(rs, { 0, -0.1, 0 });
 
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+		if (key == KeyCode::LEFT)
+			moveCube(rs, { 0.1, 0, 0 });
 
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
+		if (key == KeyCode::RIGHT)
+			moveCube(rs, { -0.1, 0, 0 });
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+		if (key == KeyCode::Space)
+			currentShape = (currentShape == Shape::Cube) ? Shape::Pyramid : Shape::Cube;
+	});
+
+	rs.init();
+	rs.setupLight(0, glm::vec3( 0,5,0 ), glm::vec3( 1,0,0 ), glm::vec3( 0,1,0 ), glm::vec3( 0,0,1 ));
+	rs.turnLight(0, true);
+
+	// Камера трохи збоку та згори, щоб було видно кілька граней фігури
+	glm::vec3 cameraPosition(2.0f, 2.0f, -3.0f);
+	glm::vec3 lookAtCenter(0.0f, 0.0f, 0.0f);
+	glm::vec3 cameraUpVector(0.0f, 1.0f, 0.0f);
+
+	glm::mat4 viewMatrix = glm::lookAt(cameraPosition, lookAtCenter, cameraUpVector);
+	rs.setViewMatrix(viewMatrix);
+
+	glm::mat4 projMatrix = glm::perspective(glm::radians(60.0f), float(width) / float(height), 0.1f, 500.f);
+	rs.setProjectionMatrix(projMatrix);
+
+	while (!glfwWindowShouldClose(window.getGLFWHandle()))
+	{
+		rs.setViewport(0, 0, window.getWidth(), window.getHeight());
+		rs.clearDisplay(0.5f, 0.5f, 0.5f);
+		renderScene(rs, currentShape);
+		glfwSwapBuffers(window.getGLFWHandle());
+		glfwWaitEvents();
+	}
+
     return 0;
 }
