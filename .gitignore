@@ -11,17 +11,10 @@
 *.gch
 *.pch
 
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
 # Compiled Dynamic libraries
 *.so
 *.dylib
 *.dll
-*.so.*
 
 # Fortran module files
 *.mod
@@ -39,30 +32,21 @@
 *.app
 
 # Build directories
-[Bb]uild/
-[Bb]uild-*/
+build/
 cmake-build-*/
+out/
 
-# CMake generated files
-CMakeFiles/
+# CMake
 CMakeCache.txt
+CMakeFiles/
 cmake_install.cmake
-Makefile
-install_manifest.txt
-compile_commands.json
-
-# Temporary files
-*.tmp
-*.log
-*.bak
-*.swp
+CMakeUserPresets.json
 
 # vcpkg
 vcpkg_installed/
 
-# debug information files
-*.dwo
-
-# test output & cache
-Testing/
-.cache/
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
